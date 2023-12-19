@@ -1,0 +1,24 @@
+.table {
+  display: grid;
+  grid-template-columns: 320px 200px;
+  /* 
+  why does grid work? 
+  put another way, why does flexbox not work? because flexbox re-sizes the grid ...? 
+  test this out more later
+  */
+}
+
+.game-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.game-state {
+  display: flex;
+  flex-direction: column;
+}
+
+.board {
+  border: solid 2px;
+}
