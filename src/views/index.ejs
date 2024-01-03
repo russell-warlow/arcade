@@ -13,12 +13,15 @@
           <p>Score: <span id="score">0</span></p>
           <p>Lines: <span id="lines">0</span></p>
           <p>Level: <span id="level">0</span></p>
-          <canvas></canvas>
+          <p>Next:</p>
+          <div id="fpsDisplay"></div>
+          <canvas id="nextPiece"></canvas>
         </div>
         <button id="startButton">Start</button>
       </div>
     </div>
     <!-- why does removing type="script" make it all work? -->
+    <script src="/scripts/globals.js"></script>
     <script src="/scripts/piece.js"></script>
     <script src="/scripts/board.js"></script>
     <script src="/scripts/main.js"></script>

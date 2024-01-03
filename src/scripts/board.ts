@@ -1,6 +1,6 @@
-const COLUMNS = 10;
-const ROWS = 20;
-const BLOCK_SIZE = 30;
+// import { json } from "stream/consumers";
+
+let spawnFlag = false;
 
 console.log("board.js loaded!");
 
@@ -13,7 +13,10 @@ class Board {
     this.ctx = ctx;
     this.ctx.canvas.width = COLUMNS * BLOCK_SIZE;
     this.ctx.canvas.height = ROWS * BLOCK_SIZE;
+    // this.piece = null;
+    // kind of a hack ... initializing Board with dummy piece
     this.piece = null;
+    this.reset();
     // this.piece = new Piece(ctx);
     // this.ctx.scale(BLOCK_SIZE, BLOCK_SIZE);
     // this.reset(); // hoisting?
@@ -41,14 +44,12 @@ class Board {
     for (let i = 0; i < newSquares.length; i++) {
       let s = newSquares[i];
       if (this.grid[s[0]][s[1]]) {
+        // have to make sure square isn't a part of where piece was previously
         if (!oldSquares.find((d) => d[0] == s[0] && d[1] == s[1])) {
           throw new Error("error in move(), moving piece to occupied square");
         }
       }
     }
-    // if (newSquares.some((c) => this.grid[c[0]][c[1]]) && oldSquares.find(d => d[0] == c[0] && d[1] == c[1])) {
-    //   throw new Error("error in move(), moving piece to occupied square");
-    // }
 
     oldSquares.forEach((s) => (this.grid[s[0]][s[1]] = 0));
     newSquares.forEach((s) => (this.grid[s[0]][s[1]] = 1));
@@ -63,67 +64,105 @@ class Board {
         }
       }
     }
-    console.log("piece: ");
-    console.table(p.shape);
-    this.print();
-    console.log("squares in piece: ");
-    this.printSquares(s);
+    // console.log("piece: ");
+    // console.table(p.shape);
+    // this.print();
+    // console.log("squares in piece: ");
+    // this.printSquares(s);
     return s;
   }
 
   printSquares(squares: number[][]) {
     squares.forEach((s) => console.log("[" + s[0] + "," + s[1] + "]"));
   }
+
+  update(): void {}
+
   /*
-  questions:
-  when update board state?
-  what does draw do? 
-  what does the game loop entail?
-
-  other questions:
-  why do we need a piece.js class?
-  what should we put in piece.js vs board.js?
-
-  if current piece has valid move down (collision detection), move current piece down, update grid
-  else spawn new piece, update grid
-  render grid
-
-  how handle keyboard inputs?
-
-  draw the next frame?
-  if piece has another valid move (hasn't hit the floor or another piece), then move it down one space
-  else, create new piece
-  re-render
-
-
+  Gravity Update:
+      The game updates at regular intervals.
+      During each update, the current tetromino is moved down by one row (or cell) based on the gravity settings.
+  User Input Handling:
+      After the gravity update, the game checks for user input.
+      Player inputs, such as left, right, rotate, or soft drop, are processed.
+  Collision Detection:
+      After handling user input, the game checks for collisions.
+      If the tetromino encounters a block or reaches the bottom, it stops falling.
+  Line Clearing:
+      The game checks for completed lines after a tetromino has stopped falling.
+      If a line is completed, it is cleared, and the player scores points.
+  Spawn New Tetromino:
+      A new tetromino is spawned, and the process repeats.
   */
   animate() {
+    console.log("animating ...");
+    // kind of a hack, is there a cleaner way to do the start?
     if (this.piece == null) {
       this.spawn();
-      this.render();
+      console.log("piece null spawning");
       return;
     }
-    if (this.hasValidDownMove(this.piece)) {
-      this.move(this.piece, this.piece.y + 1, this.piece.x);
-    } else {
-      this.spawn();
+
+    // handle key inputs
+    if (keys[KEY.LEFT]) {
+      if (this.valid(moves[KEY.LEFT](this.piece))) {
+        this.piece.move(this.piece.y, this.piece.x - 1);
+        keys[KEY.LEFT] = false;
+      }
     }
-    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-    this.render();
+    console.log("keys: " + JSON.stringify(keys));
+    if (keys[KEY.RIGHT]) {
+      console.log("processing right press");
+      if (this.valid(moves[KEY.RIGHT](this.piece))) {
+        console.log("can move piece right");
+        this.piece.move(this.piece.y, this.piece.x + 1);
+        keys[KEY.RIGHT] = false;
+      }
+    }
+    if (keys[KEY.DOWN]) {
+      this.drop();
+      keys[KEY.DOWN] = false;
+    }
+    if (keys[KEY.SPACE]) {
+      console.log("space pressed");
+      while (!spawnFlag) {
+        this.drop();
+      }
+      keys[KEY.SPACE] = false;
+    }
+    if (keys[KEY.X] || keys[KEY.UP]) {
+      if (this.valid(moves[KEY.X](this.piece))) {
+        this.piece.shape = this.piece.rotateClockwise();
+        keys[KEY.X] = false;
+        keys[KEY.UP] = false;
+      }
+    }
+    if (keys[KEY.Z] || keys[KEY.CTRL_LEFT] || keys[KEY.CTRL_RIGHT]) {
+      if (this.valid(moves[KEY.Z](this.piece))) {
+        this.piece.shape = this.piece.rotateCounterclockwise();
+        keys[KEY.Z] = false;
+        keys[KEY.CTRL_LEFT] = false;
+        keys[KEY.CTRL_RIGHT] = false;
+      }
+    }
+
+    // design question: should row cancellation take place in between freezing and spawning?
+    this.clearFilledRows();
+
+    if (spawnFlag) {
+      this.spawn();
+      spawnFlag = false;
+    }
   }
 
-  render() {
-    for (let y = 0; y < this.grid.length; y++) {
-      for (let x = 0; x < this.grid[0].length; x++) {
-        if (this.grid[y][x]) {
-          this.ctx.fillStyle = "blue";
-          let startX = x * BLOCK_SIZE;
-          let startY = y * BLOCK_SIZE;
-          this.ctx.fillRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
-          this.ctx.strokeStyle = "#000000";
-          this.ctx.lineWidth = 1;
-          this.ctx.strokeRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
-        }
+  drop(): void {
+    // why does spawnFlag have to be false? previously had a check 'if(this.piece != null && !spawnFlag)'
+    if (this.piece != null) {
+      if (this.valid(moves[KEY.DOWN](this.piece))) {
+        this.piece.move(this.piece.y + 1, this.piece.x);
+      } else {
+        this.freeze(this.piece);
+        spawnFlag = true;
       }
     }
   }
@@ -136,9 +175,109 @@ class Board {
       throw new Error("gg");
     } else {
       // add piece to grid
-      squares.forEach((s) => (this.grid[s[0]][s[1]] = 1));
+      // squares.forEach((s) => (this.grid[s[0]][s[1]] = 1));
       this.piece = newPiece;
+      this.resetTime();
     }
+  }
+
+  resetTime(): void {
+    timeExists = 0;
+    timeSimulated = 0;
+  }
+
+  clearFilledRows(): void {
+    this.grid.forEach((row, y) => {
+      if (row.every((element) => element > 0)) {
+        this.grid.splice(y, 1);
+        this.grid.unshift(new Array(COLUMNS).fill(0));
+      }
+    });
+  }
+
+  freeze(p: Piece): void {
+    console.log("freezing piece: " + p.index);
+    this.getSquaresOfPiece(p).forEach(
+      (s) => (this.grid[s[0]][s[1]] = p.index + 1)
+    );
+  }
+
+  /* 
+  sanity checks:
+  within confines of game board
+  isn't colliding with frozen pieces
+  */
+  valid(p: Piece): boolean {
+    return p.shape.every((row, y) => {
+      return row.every((value, x) => {
+        let y_ = p.y + y;
+        let x_ = p.x + x;
+        return (
+          value == 0 ||
+          (value > 0 && this.withinGrid(y_, x_) && this.noCollisions(y_, x_))
+        );
+        // if (value) {
+        //   console.log(
+        //     "result: " + this.withinGrid(y_, x_) && this.noCollisions(y_, x_)
+        //   );
+        //   this.withinGrid(y_, x_) && this.noCollisions(y_, x_);
+        // } else {
+        //   console.log("result: " + true);
+        //   true;
+        // }
+      });
+    });
+  }
+
+  valid2(p: Piece): boolean {
+    let res = true;
+    p.shape.forEach((row, y) => {
+      row.forEach((value, x) => {
+        let y_ = p.y + y;
+        let x_ = p.x + x;
+
+        let mini =
+          value == 0 ||
+          (value > 0 && this.withinGrid(y_, x_) && this.noCollisions(y_, x_));
+        console.log("[y: " + y_ + ",x: " + x_ + "], result: " + mini);
+        res = res && mini;
+      });
+    });
+    return res;
+  }
+
+  withinGrid(y: number, x: number): boolean {
+    let res = y < ROWS && x > -1 && x < COLUMNS;
+    // console.log("withinGrid res: " + res);
+    return res;
+  }
+
+  noCollisions(y: number, x: number): boolean {
+    let res = this.grid[y][x] == 0;
+    // console.log("noCollisions res: " + res);
+    return res;
+  }
+
+  clear() {
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+  }
+
+  render() {
+    this.clear();
+    this.piece?.draw();
+    this.grid.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value) {
+          this.ctx.fillStyle = shapeColors[value - 1];
+          let startX = x * BLOCK_SIZE;
+          let startY = y * BLOCK_SIZE;
+          this.ctx.fillRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
+          this.ctx.strokeStyle = COLORS.BLACK;
+          this.ctx.lineWidth = 1;
+          this.ctx.strokeRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
+        }
+      });
+    });
   }
 
   // check if all non-zero elements of matrix are zero in their future positions on the board
@@ -171,34 +310,4 @@ class Board {
     }
     return true;
   }
-  // if (squares.every(c => this.grid[c[0]][c[1]])) {
-  //   return true;
-  // }
-  // return false;
-
-  // colorRandomBoxes() {
-  //   for (var i = 0; i < 10; i++) {
-  //     const x = Math.floor(Math.random() * 10);
-  //     const y = Math.floor(Math.random() * 10);
-  //     this.grid[x][y] = 1;
-  //   }
-  // }
-
-  // testDraw() {
-  //   this.ctx.fillStyle = "#f00";
-  //   this.ctx.fillRect(2, 2, 2, 2);
-  // }
-
-  // // go through all elements and color them with canvas magic
-  // draw2() {
-  //   for (let i = 0; i < this.grid.length; i++) {
-  //     for (let j = 0; j < this.grid[0].length; j++) {
-  //       if (this.grid[i][j]) {
-  //         console.log(i + " " + j);
-  //         this.ctx.fillStyle = "#FF0000";
-  //         this.ctx.fillRect(i, j, 1, 1);
-  //       }
-  //     }
-  //   }
-  // }
 }
