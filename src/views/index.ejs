@@ -9,15 +9,21 @@
       <canvas id="board" class="board"></canvas>
       <div class="game-info">
         <div class="game-state">
-          <p>Tetris</p>
-          <p>Score: <span id="score">0</span></p>
-          <p>Lines: <span id="lines">0</span></p>
-          <p>Level: <span id="level">0</span></p>
-          <p>Next:</p>
-          <div id="fpsDisplay"></div>
-          <canvas id="nextPiece"></canvas>
+          <div>
+            <p>Tetris</p>
+            <p>Score: <span id="score">0</span></p>
+            <p>Lines: <span id="lines">0</span></p>
+            <p>Level: <span id="level">0</span></p>
+            <p>Frame Rate: <span id="fpsDisplay">0</span></p>
+            <p>Next piece:</p>
+            <canvas id="nextPiece"></canvas>
+          </div>
         </div>
-        <button id="startButton">Start</button>
+        <p id="isPaused">PAUSED</p>
+        <div>
+          <button id="startButton">Start</button>
+          <button id="restartButton">Restart</button>
+        </div>
       </div>
     </div>
     <!-- why does removing type="script" make it all work? -->

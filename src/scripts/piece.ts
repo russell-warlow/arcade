@@ -97,7 +97,12 @@ class Piece {
     this.color = shapeColors[this.index];
     this.width = this.shape[0].length;
     this.height = this.shape.length;
-    // if square piece, spawn from one column over
+    this.x = 0;
+    this.y = 0;
+  }
+
+  setStartingPosition(): void {
+    // if square piece, spawn from fourth column, otherwise third column
     this.x = this.index == 1 ? 3 : 2;
     this.y = 0;
   }
@@ -173,6 +178,23 @@ class Piece {
           // console.log("drawing piece: " + this.color);
           this.ctx.fillRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
           this.ctx.strokeStyle = COLORS.BLACK;
+          this.ctx.lineWidth = 1;
+          this.ctx.strokeRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
+        }
+      });
+    });
+  }
+
+  drawProjection(): void {
+    this.shape.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value) {
+          let startX = (this.x + x) * BLOCK_SIZE;
+          let startY = (this.y + y) * BLOCK_SIZE;
+          this.ctx.fillStyle = "#FFFFFF";
+          // console.log("drawing piece: " + this.color);
+          this.ctx.fillRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
+          this.ctx.strokeStyle = this.color;
           this.ctx.lineWidth = 1;
           this.ctx.strokeRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
         }

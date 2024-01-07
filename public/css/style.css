@@ -19,6 +19,10 @@
   flex-direction: column;
 }
 
-.board {
+#board {
   border: solid 2px;
+}
+
+#isPaused {
+  display: none;
 }
