@@ -20,66 +20,9 @@
 // /* what does this line even do?! */
 // import { BlockList } from "net";
 
-const shapes: number[][][] = [
-  [
-    [0, 0, 0, 0],
-    [1, 1, 1, 1],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    [2, 2],
-    [2, 2],
-  ],
-  [
-    [0, 3, 0],
-    [3, 3, 3],
-    [0, 0, 0],
-  ],
-  [
-    [0, 4, 4],
-    [4, 4, 0],
-    [0, 0, 0],
-  ],
-  [
-    [5, 5, 0],
-    [0, 5, 5],
-    [0, 0, 0],
-  ],
-  [
-    [0, 0, 6],
-    [6, 6, 6],
-    [0, 0, 0],
-  ],
-  [
-    [7, 0, 0],
-    [7, 7, 7],
-    [0, 0, 0],
-  ],
-];
+import { BLOCK_SIZE, COLORS, shapes, shapeColors } from "./globals";
 
-const COLORS = {
-  CYAN: "#00FFFF",
-  YELLOW: "#FFFF00",
-  PURPLE: "#5D3FD3",
-  GREEN: "#0BDA51",
-  RED: "#FF0000",
-  BLUE: "#0437F2",
-  ORANGE: "#FF5F1F",
-  BLACK: "#000000",
-};
-
-const shapeColors: string[] = [
-  COLORS.CYAN,
-  COLORS.YELLOW,
-  COLORS.PURPLE,
-  COLORS.GREEN,
-  COLORS.RED,
-  COLORS.BLUE,
-  COLORS.ORANGE,
-];
-
-class Piece {
+export default class Piece {
   // shouldn't these all be private?
   public ctx: CanvasRenderingContext2D;
   public shape: number[][];
@@ -166,9 +109,6 @@ class Piece {
   }
 
   draw(): void {
-    // console.table(this.shape);
-    // console.log(this.color);
-
     this.shape.forEach((row, y) => {
       row.forEach((value, x) => {
         if (value) {
@@ -185,14 +125,13 @@ class Piece {
     });
   }
 
-  drawProjection(): void {
+  drawProjection(pieceY: number, pieceX: number): void {
     this.shape.forEach((row, y) => {
       row.forEach((value, x) => {
         if (value) {
-          let startX = (this.x + x) * BLOCK_SIZE;
-          let startY = (this.y + y) * BLOCK_SIZE;
+          let startX = (pieceX + x) * BLOCK_SIZE;
+          let startY = (pieceY + y) * BLOCK_SIZE;
           this.ctx.fillStyle = "#FFFFFF";
-          // console.log("drawing piece: " + this.color);
           this.ctx.fillRect(startX, startY, BLOCK_SIZE, BLOCK_SIZE);
           this.ctx.strokeStyle = this.color;
           this.ctx.lineWidth = 1;

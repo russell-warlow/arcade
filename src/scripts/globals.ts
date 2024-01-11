@@ -1,21 +1,81 @@
-const COLUMNS = 10;
-const ROWS = 20;
-const BLOCK_SIZE = 30;
+export const COLUMNS = 10;
+export const ROWS = 20;
+export const BLOCK_SIZE = 30;
 
-const KEY = {
+export const KEY = {
   LEFT: "ArrowLeft",
   RIGHT: "ArrowRight",
   DOWN: "ArrowDown",
-  UP: "ArrowUp",
   SPACE: "Space",
   X: "KeyX",
   Z: "KeyZ",
-  CTRL_LEFT: "ControlLeft",
-  CTRL_RIGHT: "ControlRight",
   P: "KeyP",
 };
 
-const level: { [id: number]: number } = {
+export const keys: { [id: KeyboardEvent["code"]]: boolean } = {};
+
+export const shapeName: string[] = ["I", "O", "T", "S", "Z", "L", "J"];
+
+export const shapes: number[][][] = [
+  [
+    [0, 0, 0, 0],
+    [1, 1, 1, 1],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ],
+  [
+    [2, 2],
+    [2, 2],
+  ],
+  [
+    [0, 3, 0],
+    [3, 3, 3],
+    [0, 0, 0],
+  ],
+  [
+    [0, 4, 4],
+    [4, 4, 0],
+    [0, 0, 0],
+  ],
+  [
+    [5, 5, 0],
+    [0, 5, 5],
+    [0, 0, 0],
+  ],
+  [
+    [0, 0, 6],
+    [6, 6, 6],
+    [0, 0, 0],
+  ],
+  [
+    [7, 0, 0],
+    [7, 7, 7],
+    [0, 0, 0],
+  ],
+];
+
+export const COLORS = {
+  CYAN: "#00FFFF",
+  YELLOW: "#FFFF00",
+  PURPLE: "#5D3FD3",
+  GREEN: "#0BDA51",
+  RED: "#FF0000",
+  BLUE: "#0437F2",
+  ORANGE: "#FF5F1F",
+  BLACK: "#000000",
+};
+
+export const shapeColors: string[] = [
+  COLORS.CYAN,
+  COLORS.YELLOW,
+  COLORS.PURPLE,
+  COLORS.GREEN,
+  COLORS.RED,
+  COLORS.BLUE,
+  COLORS.ORANGE,
+];
+
+export const level: { [id: number]: number } = {
   1: 0.01667,
   2: 0.021017,
   3: 0.026977,
@@ -33,21 +93,23 @@ const level: { [id: number]: number } = {
   15: 2.36,
 };
 
-const maxLevel = 15,
-  maxFps = 60,
-  frameInterval = 1000 / maxFps;
+export const maxLevel = 15;
+export const maxFps = 60;
+export const frameInterval = 1000 / maxFps;
 
-let fps: number,
-  currentLevel: number,
-  currentScore: number,
-  currentLines: number,
-  lastFrameTimeMs: number,
-  timeExists: number,
-  timeSimulated: number,
-  framesThisSecond: number,
-  lastFpsUpdate: number,
-  running: boolean,
-  started: boolean,
-  frameId: number,
-  oldTimeExists: number,
-  oldTimeSimulated: number;
+export const gameState = {
+  currentLevel: 1,
+  currentScore: 0,
+  currentLines: 0,
+  lastFrameTimeMs: 0,
+  timeExists: 0,
+  // need to use (1 / level[currentLevel]) here but it's in the same declaration, not sure what the fix is b/c need singleton for updates?
+  // also don't like duplication of code here and in initialize() in main.ts, need to clean up
+  timeSimulated: (1 / 0.01667) * frameInterval,
+};
+
+export const scoreElement = document.getElementById("score") as HTMLSpanElement;
+export const levelElement = document.getElementById("level") as HTMLSpanElement;
+export const linesElement = document.getElementById("lines") as HTMLSpanElement;
+
+export const foo = 1;

@@ -1,15 +1,62 @@
 // import { json } from "stream/consumers";
 
-let spawnFlag = false;
+import {
+  COLUMNS,
+  ROWS,
+  BLOCK_SIZE,
+  COLORS,
+  KEY,
+  keys,
+  shapeName,
+  shapeColors,
+  maxLevel,
+  frameInterval,
+  level,
+  gameState,
+  scoreElement,
+  linesElement,
+  levelElement,
+} from "./globals";
+import Piece from "./piece";
 
 console.log("board.js loaded!");
 
-class Board {
+const moves = {
+  [KEY.DOWN]: (p: Piece) => {
+    // ({ ...p} as typeof Piece, y: p.y + 1),
+    let copy = Object.assign({}, p);
+    copy.y = p.y + 1;
+    return copy;
+  },
+  [KEY.LEFT]: (p: Piece) => {
+    let copy = Object.assign({}, p);
+    copy.x = p.x - 1;
+    return copy;
+  },
+  [KEY.RIGHT]: (p: Piece) => {
+    let copy = Object.assign({}, p);
+    copy.x = p.x + 1;
+    return copy;
+  },
+  [KEY.X]: (p: Piece) => {
+    let copy = Object.assign({}, p);
+    copy.shape = p.rotateClockwise();
+    return copy;
+  },
+  [KEY.Z]: (p: Piece) => {
+    let copy = Object.assign({}, p);
+    copy.shape = p.rotateCounterclockwise();
+    return copy;
+  },
+};
+
+export default class Board {
   private ctx: CanvasRenderingContext2D;
   private ctxNextPiece: CanvasRenderingContext2D;
   private grid: number[][] = [];
   private piece: Piece | null;
   private nextPiece: Piece;
+  private toSpawn: boolean;
 
   constructor(
     ctx: CanvasRenderingContext2D,
@@ -21,10 +68,9 @@ class Board {
     this.ctxNextPiece = ctxNextPiece;
     this.ctxNextPiece.canvas.width = 4 * BLOCK_SIZE;
     this.ctxNextPiece.canvas.height = 4 * BLOCK_SIZE;
-    // this.piece = null;
-    // kind of a hack ... initializing Board with dummy piece
     this.piece = null;
     this.nextPiece = new Piece(ctxNextPiece);
+    this.toSpawn = true;
     this.reset();
     // this.piece = new Piece(ctx);
     // this.ctx.scale(BLOCK_SIZE, BLOCK_SIZE);
@@ -126,24 +172,21 @@ class Board {
     }
     if (keys[KEY.SPACE]) {
       // kind of a hack of a loop check, make less dependency-ish
-      while (!spawnFlag) {
+      while (!this.toSpawn) {
         this.drop(2);
       }
       keys[KEY.SPACE] = false;
     }
-    if (keys[KEY.X] || keys[KEY.UP]) {
+    if (keys[KEY.X]) {
       if (this.valid(moves[KEY.X](this.piece))) {
         this.piece.shape = this.piece.rotateClockwise();
         keys[KEY.X] = false;
-        keys[KEY.UP] = false;
       }
     }
-    if (keys[KEY.Z] || keys[KEY.CTRL_LEFT] || keys[KEY.CTRL_RIGHT]) {
+    if (keys[KEY.Z]) {
       if (this.valid(moves[KEY.Z](this.piece))) {
         this.piece.shape = this.piece.rotateCounterclockwise();
         keys[KEY.Z] = false;
-        keys[KEY.CTRL_LEFT] = false;
-        keys[KEY.CTRL_RIGHT] = false;
       }
     }
 
@@ -151,27 +194,28 @@ class Board {
     this.clearFilledRows();
 
     // update game state
-    scoreElement.textContent = currentScore.toString();
-    levelElement.textContent = currentLevel.toString();
-    linesElement.textContent = currentLines.toString();
+    scoreElement.textContent = gameState.currentScore.toString();
+    levelElement.textContent = gameState.currentLevel.toString();
+    linesElement.textContent = gameState.currentLines.toString();
 
-    if (spawnFlag) {
+    if (this.toSpawn) {
       this.spawn();
-      spawnFlag = false;
+      this.toSpawn = false;
     }
   }
 
+  // should 'drop' return a boolean per success/failure?
   // 0: standard, 1: soft drop, 2: hard drop
   drop(dropType = 0): void {
-    console.log("dropping ...");
     // why does spawnFlag have to be false? previously had a check 'if(this.piece != null && !spawnFlag)'
     if (this.piece != null) {
+      console.log("dropping " + shapeName[this.piece.index]);
       if (this.valid(moves[KEY.DOWN](this.piece))) {
         this.piece.move(this.piece.y + 1, this.piece.x);
-        currentScore += dropType;
+        gameState.currentScore += dropType;
       } else {
         this.freeze(this.piece);
-        spawnFlag = true;
+        this.toSpawn = true;
       }
     }
   }
@@ -195,17 +239,19 @@ class Board {
       throw new Error("gg");
     } else {
       // add piece to grid
-      newPiece.ctx = ctx;
+      newPiece.ctx = this.ctx;
       this.piece = newPiece;
       this.resetTime();
       this.nextPiece = new Piece(this.ctxNextPiece);
-      console.log("spawning new piece ...");
+      console.log("spawning new piece: " + shapeName[this.piece.index]);
     }
   }
 
   resetTime(): void {
-    timeExists = 0;
-    timeSimulated = (1 / level[currentLevel]) * frameInterval;
+    gameState.timeExists = 0;
+    // important for initialization; otherwise, first piece falls too quickly (breaks math with initial values of zero and zero)
+    gameState.timeSimulated =
+      (1 / level[gameState.currentLevel]) * frameInterval;
   }
 
   clearFilledRows(): void {
@@ -220,36 +266,39 @@ class Board {
     if (!linesCleared) {
       return;
     }
-    currentLines += linesCleared;
+    gameState.currentLines += linesCleared;
     // ***change back to mod 10 later***
-    if (currentLines % 2 == 0) {
-      if (currentLevel != maxLevel) {
-        currentLevel += 1;
+    if (gameState.currentLines % 2 == 0) {
+      if (gameState.currentLevel != maxLevel) {
+        gameState.currentLevel += 1;
       }
     }
+
+    // points calculated after level change
     let points = 0;
     switch (linesCleared) {
       case 1:
-        points = 100 * currentLevel;
+        points = 100;
         break;
       case 2:
-        points = 300 * currentLevel;
+        points = 300;
         break;
       case 3:
-        points = 500 * currentLevel;
+        points = 500;
         break;
       case 4:
-        points = 800 * currentLevel;
+        points = 800;
         break;
       default:
         console.log("cleared too many lines: " + linesCleared);
         break;
     }
-    currentScore += points;
+
+    gameState.currentScore += points * gameState.currentLevel;
   }
 
   freeze(p: Piece): void {
-    console.log("freezing piece: " + p.index);
+    console.log("freezing piece: " + shapeName[p.index]);
     this.getSquaresOfPiece(p).forEach(
       (s) => (this.grid[s[0]][s[1]] = p.index + 1)
     );
@@ -318,20 +367,12 @@ class Board {
 
   what a hack, need to improve this
   */
-  hardDrop(currentPiece: Piece): Piece {
-    let copy = Object.assign({}, currentPiece);
+  ghostLocation(): number[] {
+    let copy = Object.assign({}, this.piece);
     while (this.valid(copy)) {
       copy = moves[KEY.DOWN](copy);
     }
-    let shadow = new Piece(ctx);
-    shadow.y = copy.y - 1;
-    shadow.x = copy.x;
-    shadow.shape = copy.shape;
-    shadow.index = copy.index;
-    shadow.width = copy.width;
-    shadow.height = copy.width;
-    shadow.color = copy.color;
-    return shadow;
+    return [copy.y - 1, copy.x];
   }
 
   clear() {
@@ -347,7 +388,24 @@ class Board {
   render() {
     this.clear();
     if (this.piece != null) {
-      // this.hardDrop(this.piece).drawProjection();
+      // order matters here so that piece overrides ghost
+      let coordinates = this.ghostLocation();
+      // if current piece just got frozen, the there is a single frame where ghost piece will end up being above the current piece
+      if (coordinates[0] > this.piece.y) {
+        this.piece.drawProjection(coordinates[0], coordinates[1]);
+      }
+      console.log("rendering ... ");
+      console.log(
+        "this piece: " +
+          shapeName[this.piece.index] +
+          ", y: " +
+          this.piece.y +
+          ", x: " +
+          this.piece.x
+      );
+      console.log(
+        "ghost piece: y: " + coordinates[0] + ", x: " + coordinates[1]
+      );
       this.piece.draw();
       this.nextPiece.draw();
       this.grid.forEach((row, y) => {

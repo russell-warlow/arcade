@@ -10,7 +10,7 @@
       <div class="game-info">
         <div class="game-state">
           <div>
-            <p>Tetris</p>
+            <p><b>Tetris</b></p>
             <p>Score: <span id="score">0</span></p>
             <p>Lines: <span id="lines">0</span></p>
             <p>Level: <span id="level">0</span></p>
@@ -21,15 +21,29 @@
         </div>
         <p id="isPaused">PAUSED</p>
         <div>
-          <button id="startButton">Start</button>
-          <button id="restartButton">Restart</button>
+          <button id="startButton">Start/Restart</button>
+          <!-- <button id="restartButton">Restart</button> -->
         </div>
+      </div>
+      <div>
+        <p><b>Keyboard instructions</b></p>
+        <p>Left arrow: move left</p>
+        <p>Right arrow: move right</p>
+        <p>X: rotate clockwise</p>
+        <p>Z: rotate counter-clockwise</p>
+        <p>Down arrow: soft drop</p>
+        <p>Space: hard drop</p>
+        <p>P: pause/unpause game</p>
       </div>
     </div>
     <!-- why does removing type="script" make it all work? -->
-    <script src="/scripts/globals.js"></script>
+    <!-- <script src="/scripts/globals.js"></script>
+    <script src="/scripts/music.js"></script>
     <script src="/scripts/piece.js"></script>
-    <script src="/scripts/board.js"></script>
+    <script src="/scripts/board.js"></script> -->
+    <script>
+      var exports = {};
+    </script>
     <script src="/scripts/main.js"></script>
   </body>
 </html>

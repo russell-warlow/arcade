@@ -1,3 +1,9 @@
+import { keys, level, frameInterval, gameState } from "./globals";
+import Board from "./board";
+import sfx from "./music";
+
+console.log("main.js loaded!");
+
 const canvas = document.getElementById("board") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 const fpsDisplay = document.getElementById("fpsDisplay") as HTMLDivElement;
@@ -11,28 +17,31 @@ const ctxNextPiece = canvasNextPiece.getContext(
 
 const isPaused = document.getElementById("isPaused") as HTMLParagraphElement;
 
-const scoreElement = document.getElementById("score") as HTMLSpanElement;
-const levelElement = document.getElementById("level") as HTMLSpanElement;
-const linesElement = document.getElementById("lines") as HTMLSpanElement;
-
 const startButton = document.getElementById("startButton") as HTMLButtonElement;
-const restartButton = document.getElementById(
-  "restartButton"
-) as HTMLButtonElement;
+// const restartButton = document.getElementById(
+//   "restartButton"
+// ) as HTMLButtonElement;
 
-console.log("main.js loaded!");
-
-let board = new Board(ctx, ctxNextPiece);
+let board = new Board(ctx, ctxNextPiece),
+  fps = 60,
+  lastFrameTimeMs = 0,
+  framesThisSecond = 0,
+  lastFpsUpdate = 0,
+  running = false,
+  started = false,
+  frameId = 0,
+  oldTimeExists = 0,
+  oldTimeSimulated = 0;
 
 function initialize() {
   board = new Board(ctx, ctxNextPiece);
+  gameState.currentLevel = 1;
+  gameState.currentScore = 0;
+  gameState.currentLines = 0;
+  gameState.timeExists = 0;
+  gameState.timeSimulated = (1 / level[gameState.currentLevel]) * frameInterval;
   fps = 60;
-  currentLevel = 1;
-  currentScore = 0;
-  currentLines = 0;
   lastFrameTimeMs = 0;
-  timeExists = 0;
-  timeSimulated = (1 / level[currentLevel]) * frameInterval;
   framesThisSecond = 0;
   lastFpsUpdate = 0;
   running = false;
@@ -42,52 +51,6 @@ function initialize() {
   oldTimeSimulated = 0;
 }
 
-const moves = {
-  [KEY.DOWN]: (p: Piece) => {
-    // ({ ...p} as typeof Piece, y: p.y + 1),
-    let copy = Object.assign({}, p);
-    copy.y = p.y + 1;
-    return copy;
-  },
-  [KEY.LEFT]: (p: Piece) => {
-    let copy = Object.assign({}, p);
-    copy.x = p.x - 1;
-    return copy;
-  },
-  [KEY.RIGHT]: (p: Piece) => {
-    let copy = Object.assign({}, p);
-    copy.x = p.x + 1;
-    return copy;
-  },
-  [KEY.UP]: (p: Piece) => {
-    let copy = Object.assign({}, p);
-    copy.shape = p.rotateClockwise();
-    return copy;
-  },
-  [KEY.X]: (p: Piece) => {
-    let copy = Object.assign({}, p);
-    copy.shape = p.rotateClockwise();
-    return copy;
-  },
-  [KEY.Z]: (p: Piece) => {
-    let copy = Object.assign({}, p);
-    copy.shape = p.rotateCounterclockwise();
-    return copy;
-  },
-  [KEY.CTRL_LEFT]: (p: Piece) => {
-    let copy = Object.assign({}, p);
-    copy.shape = p.rotateCounterclockwise();
-    return copy;
-  },
-  [KEY.CTRL_RIGHT]: (p: Piece) => {
-    let copy = Object.assign({}, p);
-    copy.shape = p.rotateCounterclockwise();
-    return copy;
-  },
-};
-
-const keys: { [id: KeyboardEvent["code"]]: boolean } = {};
-
 window.addEventListener("keydown", (e) => {
   // Allow the default behavior for Ctrl + Shift + R (refresh)
   if (e.ctrlKey && e.shiftKey && e.key === "R") {
@@ -95,7 +58,7 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.key === "p" || e.key === "P") {
     if (started && running) {
-      stop();
+      stopGame();
     } else if (!started && !running) {
       start();
     }
@@ -116,6 +79,7 @@ function start() {
   if (!started) {
     isPaused.style.display = "none";
     started = true;
+    sfx.game.play();
     frameId = requestAnimationFrame(function (timestamp) {
       running = true;
       // why need render here?
@@ -123,23 +87,24 @@ function start() {
       lastFrameTimeMs = timestamp;
       lastFpsUpdate = timestamp;
       framesThisSecond = 0;
-      timeExists = oldTimeExists;
+      gameState.timeExists = oldTimeExists;
       // handle start case, where don't know if starting fresh or from pause, better way to handle this?
-      timeSimulated = oldTimeSimulated;
+      gameState.timeSimulated = oldTimeSimulated;
       frameId = requestAnimationFrame(gameLoop);
     });
-    startButton.disabled = true;
-    startButton.blur();
+    // startButton.disabled = true;
+    // startButton.blur();
   }
 }
 
-function stop() {
+function stopGame() {
   isPaused.style.display = "block";
   running = false;
   started = false;
+  sfx.game.stop();
   // store old timeExists and timeSimulated calculation ?
-  oldTimeExists = timeExists;
-  oldTimeSimulated = timeSimulated;
+  oldTimeExists = gameState.timeExists;
+  oldTimeSimulated = gameState.timeSimulated;
   cancelAnimationFrame(frameId);
 }
 
@@ -150,7 +115,8 @@ function gameLoop(timestamp: DOMHighResTimeStamp): void {
       frameId = requestAnimationFrame(gameLoop);
       return;
     }
-    console.log("new frame timestamp: " + timestamp);
+    // console.log("new frame timestamp: " + timestamp);
+
     // calculate moving average of frame rate
     if (timestamp > lastFpsUpdate + 1000) {
       fps = 0.25 * framesThisSecond + (1 - 0.25) * fps;
@@ -159,12 +125,12 @@ function gameLoop(timestamp: DOMHighResTimeStamp): void {
     }
     framesThisSecond++;
 
-    console.log(
-      "in gameLoop: timeExists: " +
-        timeExists +
-        ", timeSimulated: " +
-        timeSimulated
-    );
+    // console.log(
+    //   "in gameLoop: timeExists: " +
+    //     timeExists +
+    //     ", timeSimulated: " +
+    //     timeSimulated
+    // );
     const deltaTime = timestamp - lastFrameTimeMs;
     update(deltaTime);
     render();
@@ -175,17 +141,18 @@ function gameLoop(timestamp: DOMHighResTimeStamp): void {
 
 function update(deltaTime: number): void {
   // time in ms
-  timeExists += deltaTime;
+  gameState.timeExists += deltaTime;
   board.update();
-  while (timeExists > timeSimulated) {
-    console.log(
-      "in update: timeExists: " +
-        timeExists +
-        ", timeSimulated: " +
-        timeSimulated
-    );
+  while (gameState.timeExists > gameState.timeSimulated) {
+    // console.log(
+    //   "in update: timeExists: " +
+    //     timeExists +
+    //     ", timeSimulated: " +
+    //     timeSimulated
+    // );
     board.drop();
-    timeSimulated += (1 / level[currentLevel]) * frameInterval;
+    gameState.timeSimulated +=
+      (1 / level[gameState.currentLevel]) * frameInterval;
   }
 }
 
@@ -196,16 +163,19 @@ function render(): void {
 
 document.addEventListener("DOMContentLoaded", () => {
   startButton.addEventListener("click", () => {
+    if (started && running) {
+      stopGame();
+    }
     initialize();
     start();
   });
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  restartButton.addEventListener("click", () => {
-    stop();
-    // reset all global variables, easier way to do this?
-    initialize();
-    start();
-  });
-});
+// document.addEventListener("DOMContentLoaded", () => {
+//   restartButton.addEventListener("click", () => {
+//     stopGame();
+//     // reset all global variables, easier way to do this?
+//     initialize();
+//     start();
+//   });
+// });
