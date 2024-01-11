@@ -15,7 +15,10 @@ const ctxNextPiece = canvasNextPiece.getContext(
   "2d"
 ) as CanvasRenderingContext2D;
 
-const isPaused = document.getElementById("isPaused") as HTMLParagraphElement;
+const pauseOverlay = document.getElementById("pauseOverlay") as HTMLDivElement;
+const gameOverOverlay = document.getElementById(
+  "gameOverOverlay"
+) as HTMLDivElement;
 
 const startButton = document.getElementById("startButton") as HTMLButtonElement;
 // const restartButton = document.getElementById(
@@ -49,16 +52,20 @@ function initialize() {
   frameId = 0;
   oldTimeExists = 0;
   oldTimeSimulated = 0;
+  pauseOverlay.style.display = "none";
+  gameOverOverlay.style.display = "none";
+  window.addEventListener("keydown", keyDownHandler);
+  window.addEventListener("keyup", keyUpHandler);
 }
 
-window.addEventListener("keydown", (e) => {
+function keyDownHandler(e: KeyboardEvent) {
   // Allow the default behavior for Ctrl + Shift + R (refresh)
   if (e.ctrlKey && e.shiftKey && e.key === "R") {
     return;
   }
   if (e.key === "p" || e.key === "P") {
     if (started && running) {
-      stopGame();
+      pauseGame();
     } else if (!started && !running) {
       start();
     }
@@ -69,15 +76,15 @@ window.addEventListener("keydown", (e) => {
   if (!keys[e.code]) {
     keys[e.code] = true;
   }
-});
+}
 
-window.addEventListener("keyup", (e) => {
+function keyUpHandler(e: KeyboardEvent) {
   keys[e.code] = false;
-});
+}
 
 function start() {
   if (!started) {
-    isPaused.style.display = "none";
+    pauseOverlay.style.display = "none";
     started = true;
     sfx.game.play();
     frameId = requestAnimationFrame(function (timestamp) {
@@ -97,14 +104,23 @@ function start() {
   }
 }
 
-function stopGame() {
-  isPaused.style.display = "block";
+function pauseGame() {
+  pauseOverlay.style.display = "block";
   running = false;
   started = false;
-  sfx.game.stop();
+  sfx.game.pause();
   // store old timeExists and timeSimulated calculation ?
   oldTimeExists = gameState.timeExists;
   oldTimeSimulated = gameState.timeSimulated;
+  cancelAnimationFrame(frameId);
+}
+
+function stopGame() {
+  window.removeEventListener("keydown", keyDownHandler);
+  window.removeEventListener("keyup", keyUpHandler);
+  running = false;
+  started = false;
+  sfx.game.stop();
   cancelAnimationFrame(frameId);
 }
 
@@ -132,7 +148,20 @@ function gameLoop(timestamp: DOMHighResTimeStamp): void {
     //     timeSimulated
     // );
     const deltaTime = timestamp - lastFrameTimeMs;
-    update(deltaTime);
+
+    // kind of a hack
+    try {
+      update(deltaTime);
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === "gameover") {
+          gameOverOverlay.style.display = "block";
+          stopGame();
+        }
+      } else {
+        throw err;
+      }
+    }
     render();
     lastFrameTimeMs = timestamp;
     frameId = requestAnimationFrame(gameLoop);
@@ -163,9 +192,7 @@ function render(): void {
 
 document.addEventListener("DOMContentLoaded", () => {
   startButton.addEventListener("click", () => {
-    if (started && running) {
-      stopGame();
-    }
+    stopGame();
     initialize();
     start();
   });

@@ -8,6 +8,7 @@ app.set("view engine", "ejs");
 
 //app.use(express.static(__dirname + "../public"));
 app.use(express.static(path.join(__dirname, "../public")));
+app.use("/sounds", express.static(path.join(__dirname, "../sounds")));
 
 app.get("/", (req: Request, res: Response, next: NextFunction) => {
   res.render("index");

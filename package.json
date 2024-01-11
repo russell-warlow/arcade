@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node public/app.js",
     "dev": "nodemon src/app.ts",
-    "build": "tsc -p ."
+    "build": "webpack",
+    "start": "nodemon --watch 'src/**/*.ts' --exec 'npm run build && node public/scripts/bundle.js'"
   },
   "author": "",
   "license": "ISC",
@@ -20,7 +21,10 @@
     "@types/howler": "^2.2.11",
     "@types/node": "^20.10.4",
     "nodemon": "^3.0.2",
+    "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
   }
 }

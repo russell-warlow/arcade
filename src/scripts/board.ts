@@ -17,6 +17,7 @@ import {
   linesElement,
   levelElement,
 } from "./globals";
+import sfx from "./music";
 import Piece from "./piece";
 
 console.log("board.js loaded!");
@@ -175,17 +176,20 @@ export default class Board {
       while (!this.toSpawn) {
         this.drop(2);
       }
+      sfx.harddrop.play();
       keys[KEY.SPACE] = false;
     }
     if (keys[KEY.X]) {
       if (this.valid(moves[KEY.X](this.piece))) {
         this.piece.shape = this.piece.rotateClockwise();
+        sfx.rotate.play();
         keys[KEY.X] = false;
       }
     }
     if (keys[KEY.Z]) {
       if (this.valid(moves[KEY.Z](this.piece))) {
         this.piece.shape = this.piece.rotateCounterclockwise();
+        sfx.rotate.play();
         keys[KEY.Z] = false;
       }
     }
@@ -232,17 +236,19 @@ export default class Board {
   */
   spawn() {
     let newPiece = this.nextPiece;
+    // need to set nextPiece before gameover so nextPiece is correctly rendered
+    this.nextPiece = new Piece(this.ctxNextPiece);
     newPiece.setStartingPosition();
     let squares = this.getSquaresOfPiece(newPiece);
     if (squares.some((s) => this.grid[s[0]][s[1]])) {
+      sfx.gameover.play();
       // handle game over somehow
-      throw new Error("gg");
+      throw new Error("gameover");
     } else {
       // add piece to grid
       newPiece.ctx = this.ctx;
       this.piece = newPiece;
       this.resetTime();
-      this.nextPiece = new Piece(this.ctxNextPiece);
       console.log("spawning new piece: " + shapeName[this.piece.index]);
     }
   }
@@ -265,40 +271,43 @@ export default class Board {
     });
     if (!linesCleared) {
       return;
-    }
-    gameState.currentLines += linesCleared;
-    // ***change back to mod 10 later***
-    if (gameState.currentLines % 2 == 0) {
-      if (gameState.currentLevel != maxLevel) {
-        gameState.currentLevel += 1;
+    } else {
+      sfx.clearlines.play();
+      gameState.currentLines += linesCleared;
+      // ***change back to mod 10 later***
+      if (gameState.currentLines % 2 == 0) {
+        if (gameState.currentLevel != maxLevel) {
+          gameState.currentLevel += 1;
+          sfx.levelup.play();
+        }
       }
-    }
 
-    // points calculated after level change
-    let points = 0;
-    switch (linesCleared) {
-      case 1:
-        points = 100;
-        break;
-      case 2:
-        points = 300;
-        break;
-      case 3:
-        points = 500;
-        break;
-      case 4:
-        points = 800;
-        break;
-      default:
-        console.log("cleared too many lines: " + linesCleared);
-        break;
+      // points calculated after level change
+      let points = 0;
+      switch (linesCleared) {
+        case 1:
+          points = 100;
+          break;
+        case 2:
+          points = 300;
+          break;
+        case 3:
+          points = 500;
+          break;
+        case 4:
+          points = 800;
+          break;
+        default:
+          console.log("cleared too many lines: " + linesCleared);
+          break;
+      }
+      gameState.currentScore += points * gameState.currentLevel;
     }
-
-    gameState.currentScore += points * gameState.currentLevel;
   }
 
   freeze(p: Piece): void {
     console.log("freezing piece: " + shapeName[p.index]);
+    sfx.freeze.play();
     this.getSquaresOfPiece(p).forEach(
       (s) => (this.grid[s[0]][s[1]] = p.index + 1)
     );
