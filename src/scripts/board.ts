@@ -1,5 +1,3 @@
-// import { json } from "stream/consumers";
-
 import {
   COLUMNS,
   ROWS,
@@ -20,11 +18,8 @@ import {
 import sfx from "./music";
 import Piece from "./piece";
 
-console.log("board.js loaded!");
-
 const moves = {
   [KEY.DOWN]: (p: Piece) => {
-    // ({ ...p} as typeof Piece, y: p.y + 1),
     let copy = Object.assign({}, p);
     copy.y = p.y + 1;
     return copy;
@@ -73,9 +68,6 @@ export default class Board {
     this.nextPiece = new Piece(ctxNextPiece);
     this.toSpawn = true;
     this.reset();
-    // this.piece = new Piece(ctx);
-    // this.ctx.scale(BLOCK_SIZE, BLOCK_SIZE);
-    // this.reset(); // hoisting?
   }
 
   reset() {
@@ -84,31 +76,6 @@ export default class Board {
 
   print() {
     console.table(this.grid);
-  }
-
-  // delete where piece was, update to where it is
-  move(p: Piece, y: number, x: number) {
-    let oldSquares = this.getSquaresOfPiece(p);
-    // if every square is filled
-    if (oldSquares.some((c) => this.grid[c[0]][c[1]] == 0)) {
-      throw new Error("error in move(), moving unoccupied square");
-    }
-    // better to copy the object?
-    p.x = x;
-    p.y = y;
-    let newSquares = this.getSquaresOfPiece(p);
-    for (let i = 0; i < newSquares.length; i++) {
-      let s = newSquares[i];
-      if (this.grid[s[0]][s[1]]) {
-        // have to make sure square isn't a part of where piece was previously
-        if (!oldSquares.find((d) => d[0] == s[0] && d[1] == s[1])) {
-          throw new Error("error in move(), moving piece to occupied square");
-        }
-      }
-    }
-
-    oldSquares.forEach((s) => (this.grid[s[0]][s[1]] = 0));
-    newSquares.forEach((s) => (this.grid[s[0]][s[1]] = 1));
   }
 
   // returns array of [y,x] coordinates where piece exists, adjusted for position of piece on grid
@@ -121,11 +88,6 @@ export default class Board {
         }
       }
     }
-    // console.log("piece: ");
-    // console.table(p.shape);
-    // this.print();
-    // console.log("squares in piece: ");
-    // this.printSquares(s);
     return s;
   }
 
@@ -155,7 +117,7 @@ export default class Board {
       this.spawn();
       return;
     }
-    // handle key inputs
+
     if (keys[KEY.LEFT]) {
       if (this.valid(moves[KEY.LEFT](this.piece))) {
         this.piece.move(this.piece.y, this.piece.x - 1);
@@ -197,7 +159,6 @@ export default class Board {
     // design question: should row cancellation take place in between freezing and spawning?
     this.clearFilledRows();
 
-    // update game state
     scoreElement.textContent = gameState.currentScore.toString();
     levelElement.textContent = gameState.currentLevel.toString();
     linesElement.textContent = gameState.currentLines.toString();
@@ -208,12 +169,11 @@ export default class Board {
     }
   }
 
-  // should 'drop' return a boolean per success/failure?
+  // should drop return a boolean per success/failure?
   // 0: standard, 1: soft drop, 2: hard drop
   drop(dropType = 0): void {
     // why does spawnFlag have to be false? previously had a check 'if(this.piece != null && !spawnFlag)'
     if (this.piece != null) {
-      console.log("dropping " + shapeName[this.piece.index]);
       if (this.valid(moves[KEY.DOWN](this.piece))) {
         this.piece.move(this.piece.y + 1, this.piece.x);
         gameState.currentScore += dropType;
@@ -224,16 +184,6 @@ export default class Board {
     }
   }
 
-  // if cannot spawn, then game over
-  /*
-  what need to do when start board ... 
-  create a next piece
-
-  when start animating ...
-  make this piece equal to last next piece
-  create new next piece
-  re-draw next piece canvas
-  */
   spawn() {
     let newPiece = this.nextPiece;
     // need to set nextPiece before gameover so nextPiece is correctly rendered
@@ -242,14 +192,11 @@ export default class Board {
     let squares = this.getSquaresOfPiece(newPiece);
     if (squares.some((s) => this.grid[s[0]][s[1]])) {
       sfx.gameover.play();
-      // handle game over somehow
       throw new Error("gameover");
     } else {
-      // add piece to grid
       newPiece.ctx = this.ctx;
       this.piece = newPiece;
       this.resetTime();
-      console.log("spawning new piece: " + shapeName[this.piece.index]);
     }
   }
 
@@ -274,15 +221,14 @@ export default class Board {
     } else {
       sfx.clearlines.play();
       gameState.currentLines += linesCleared;
-      // ***change back to mod 10 later***
-      if (gameState.currentLines % 2 == 0) {
+      if (gameState.currentLines % 10 == 0) {
         if (gameState.currentLevel != maxLevel) {
           gameState.currentLevel += 1;
           sfx.levelup.play();
         }
       }
 
-      // points calculated after level change
+      // points calculated *after* level change
       let points = 0;
       switch (linesCleared) {
         case 1:
@@ -306,7 +252,6 @@ export default class Board {
   }
 
   freeze(p: Piece): void {
-    console.log("freezing piece: " + shapeName[p.index]);
     sfx.freeze.play();
     this.getSquaresOfPiece(p).forEach(
       (s) => (this.grid[s[0]][s[1]] = p.index + 1)
@@ -327,34 +272,8 @@ export default class Board {
           value == 0 ||
           (value > 0 && this.withinGrid(y_, x_) && this.noCollisions(y_, x_))
         );
-        // if (value) {
-        //   console.log(
-        //     "result: " + this.withinGrid(y_, x_) && this.noCollisions(y_, x_)
-        //   );
-        //   this.withinGrid(y_, x_) && this.noCollisions(y_, x_);
-        // } else {
-        //   console.log("result: " + true);
-        //   true;
-        // }
       });
     });
-  }
-
-  valid2(p: Piece): boolean {
-    let res = true;
-    p.shape.forEach((row, y) => {
-      row.forEach((value, x) => {
-        let y_ = p.y + y;
-        let x_ = p.x + x;
-
-        let mini =
-          value == 0 ||
-          (value > 0 && this.withinGrid(y_, x_) && this.noCollisions(y_, x_));
-        console.log("[y: " + y_ + ",x: " + x_ + "], result: " + mini);
-        res = res && mini;
-      });
-    });
-    return res;
   }
 
   withinGrid(y: number, x: number): boolean {
@@ -369,13 +288,6 @@ export default class Board {
     return res;
   }
 
-  /*
-  check if next move down is valid
-  if so, then drop
-  recurse
-
-  what a hack, need to improve this
-  */
   ghostLocation(): number[] {
     let copy = Object.assign({}, this.piece);
     while (this.valid(copy)) {
@@ -403,18 +315,6 @@ export default class Board {
       if (coordinates[0] > this.piece.y) {
         this.piece.drawProjection(coordinates[0], coordinates[1]);
       }
-      console.log("rendering ... ");
-      console.log(
-        "this piece: " +
-          shapeName[this.piece.index] +
-          ", y: " +
-          this.piece.y +
-          ", x: " +
-          this.piece.x
-      );
-      console.log(
-        "ghost piece: y: " + coordinates[0] + ", x: " + coordinates[1]
-      );
       this.piece.draw();
       this.nextPiece.draw();
       this.grid.forEach((row, y) => {
@@ -431,36 +331,5 @@ export default class Board {
         });
       });
     }
-  }
-
-  // check if all non-zero elements of matrix are zero in their future positions on the board
-  hasValidDownMove(p: Piece): boolean {
-    // get all squares that piece occupies
-    const squares = [];
-    for (let y = 0; y < p.height; y++) {
-      for (let x = 0; x < p.width; x++) {
-        if (p.shape[y][x]) {
-          squares.push([p.y + y, p.x + x]);
-        }
-      }
-    }
-
-    for (let i = 0; i < squares.length; i++) {
-      let s = squares[i];
-      console.log("s: " + s);
-      console.log("s[0]: " + s[0]);
-      console.log("s[1]: " + s[1]);
-      if (s[0] + 1 >= ROWS) {
-        console.log("reach floor: " + s);
-        return false;
-      } else if (this.grid[s[0] + 1][s[1]]) {
-        // if new squares isn't part of old piece
-        if (!squares.find((c) => c[0] == s[0] + 1 && c[1] == s[1])) {
-          console.log("hit another piece " + s);
-          return false;
-        }
-      }
-    }
-    return true;
   }
 }
