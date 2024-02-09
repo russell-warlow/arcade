@@ -9,8 +9,8 @@ const app = express();
 
 app.use(express.static(path.join(__dirname, "..", "..")));
 
-app.get("/", (req, res, next) => {
-  res.render("views/index.html");
-});
+// app.get("/", (req, res, next) => {
+//   res.render("views/index");
+// });
 
 export const handler = serverless(app);
