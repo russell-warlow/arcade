@@ -4,13 +4,13 @@ import path from "path";
 
 const app = express();
 
-app.set("views", path.join(__dirname, "..", "..", "views"));
+// app.set("views", path.join(__dirname, "..", "..", "views"));
 // app.set("view engine", "ejs");
 
 app.use(express.static(path.join(__dirname, "..", "..")));
 
 app.get("/", (req, res, next) => {
-  res.render("index");
+  res.render("view/index");
 });
 
 export const handler = serverless(app);
