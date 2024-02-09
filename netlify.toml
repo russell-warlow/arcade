@@ -4,3 +4,8 @@
 [build]
   command = "npm run build"
   publish = "public"
+[[redirects]]
+  force = true
+  from = "/*"
+  status = 200
+  to = "/.netlify/functions/app"
