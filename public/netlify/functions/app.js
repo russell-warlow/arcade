@@ -16,7 +16,7 @@
 // export const handler = serverless(app);
 
 import { createServer, IncomingMessage, ServerResponse } from "http";
-import { join } from "path";
+import { path } from "path";
 import { readFileSync } from "fs";
 import serverless from "serverless-http";
 
