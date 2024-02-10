@@ -71,11 +71,11 @@ const server = createServer((req, res) => {
   // Serve the index.html file
   if (req.url === "/" || req.url === "/index.html") {
     // Read the contents of the index.html file
-    const indexPath = path.resolve("./public/index.html");
-    const indexContent = readFileSync(indexPath, "utf-8");
+    // const indexPath = path.resolve("./public/index.html");
+    // const indexContent = readFileSync(indexPath, "utf-8");
 
-    // Set the Content-Type header
-    res.setHeader("Content-Type", "text/html");
+    // // Set the Content-Type header
+    // res.setHeader("Content-Type", "text/html");
 
     // Send the HTML content
     res.end(htmlContent);
