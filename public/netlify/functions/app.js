@@ -24,7 +24,7 @@ const server = createServer((req, res) => {
   // Serve the index.html file
   if (req.url === "/" || req.url === "/index.html") {
     // Read the contents of the index.html file
-    const indexPath = join("public", "views", "index.html");
+    const indexPath = join(__dirname, "..", "..", "views", "index.html");
     const indexContent = readFileSync(indexPath, "utf-8");
 
     // Set the Content-Type header
