@@ -2,6 +2,7 @@
 const path = require("path");
 
 module.exports = {
+  mode: "development",
   entry: "./src/scripts/main.ts", // Entry point of your application
   target: "node", // Specify the environment (Node.js)
   module: {

@@ -1,7 +1,6 @@
 import { BLOCK_SIZE, COLORS, shapes, shapeColors } from "./globals";
 
 export default class Piece {
-  // shouldn't these all be private?
   public ctx: CanvasRenderingContext2D;
   public shape: number[][];
   public color: string;
@@ -11,9 +10,12 @@ export default class Piece {
   public y: number;
   public index: number;
 
-  constructor(ctx: CanvasRenderingContext2D) {
+  constructor(ctx: CanvasRenderingContext2D, seed?: number) {
     this.ctx = ctx;
-    this.index = Math.floor(Math.random() * shapes.length);
+    this.index =
+      typeof seed == "undefined"
+        ? Math.floor(Math.random() * shapes.length)
+        : seed;
     this.shape = shapes[this.index];
     this.color = shapeColors[this.index];
     this.width = this.shape[0].length;
@@ -57,6 +59,14 @@ export default class Piece {
   private reverse(matrix: number[][]): number[][] {
     matrix.map((row) => row.reverse());
     return matrix;
+  }
+
+  getX(): number {
+    return this.x;
+  }
+
+  getY(): number {
+    return this.y;
   }
 
   draw(): void {

@@ -14,8 +14,6 @@ export const KEY = {
 
 export const keys: { [id: KeyboardEvent["code"]]: boolean } = {};
 
-export const shapeName: string[] = ["I", "O", "T", "S", "Z", "L", "J"];
-
 export const shapes: number[][][] = [
   [
     [0, 0, 0, 0],

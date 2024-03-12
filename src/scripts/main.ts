@@ -60,7 +60,7 @@ import sfx from "./music";
   }
 
   function keyDownHandler(e: KeyboardEvent) {
-    // Allow the default behavior for Ctrl + Shift + R (refresh)
+    // Allow the default behavior for Ctrl + Shift + R (refresh) for debugging purposes
     if (e.ctrlKey && e.shiftKey && e.key === "R") {
       return;
     }
@@ -72,6 +72,7 @@ import sfx from "./music";
       }
       return;
     }
+    // important for keeping page still with arrow and space key presses
     e.preventDefault();
     if (!keys[e.code]) {
       keys[e.code] = true;
@@ -89,7 +90,6 @@ import sfx from "./music";
       sfx.game.play();
       frameId = requestAnimationFrame(function (timestamp) {
         running = true;
-        // why need render here?
         render();
         lastFrameTimeMs = timestamp;
         lastFpsUpdate = timestamp;
@@ -122,6 +122,8 @@ import sfx from "./music";
     cancelAnimationFrame(frameId);
   }
 
+  // game loop modeled with help from this page:
+  // https://isaacsukin.com/news/2015/01/detailed-explanation-javascript-game-loops-and-timing
   function gameLoop(timestamp: DOMHighResTimeStamp): void {
     if (running) {
       // throttle frame rate
@@ -156,6 +158,8 @@ import sfx from "./music";
     }
   }
 
+  // logic for how speed curve in tetris works:
+  // https://gamedev.stackexchange.com/questions/159835/understanding-tetris-speed-curve
   function update(deltaTime: number): void {
     // time in ms
     gameState.timeExists += deltaTime;

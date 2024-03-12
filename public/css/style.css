@@ -1,11 +1,7 @@
 .table {
+  /* need grid instead of flexbox because flexbox resizes canvas */
   display: grid;
   grid-template-columns: 320px 200px 300px;
-  /* 
-  why does grid work? 
-  put another way, why does flexbox not work? because flexbox re-sizes the grid ...? 
-  test this out more later
-  */
 }
 
 .game-info {

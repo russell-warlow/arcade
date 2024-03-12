@@ -5,7 +5,6 @@ import {
   COLORS,
   KEY,
   keys,
-  shapeName,
   shapeColors,
   maxLevel,
   frameInterval,
@@ -67,18 +66,18 @@ export default class Board {
     this.piece = null;
     this.nextPiece = new Piece(ctxNextPiece);
     this.toSpawn = true;
-    this.reset();
+    this.resetBoard();
   }
 
-  reset() {
+  resetBoard() {
     this.grid = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(0));
   }
 
-  print() {
+  printBoard() {
     console.table(this.grid);
   }
 
-  // returns array of [y,x] coordinates where piece exists, adjusted for position of piece on grid
+  // Returns array of [y,x] coordinates where piece exists, adjusted for position of piece on grid.
   getSquaresOfPiece(p: Piece): number[][] {
     const s = [];
     for (let y = 0; y < p.height; y++) {
@@ -95,24 +94,15 @@ export default class Board {
     squares.forEach((s) => console.log("[" + s[0] + "," + s[1] + "]"));
   }
 
-  /*
-  Gravity Update:
-      The game updates at regular intervals.
-      During each update, the current tetromino is moved down by one row (or cell) based on the gravity settings.
-  User Input Handling:
-      After the gravity update, the game checks for user input.
-      Player inputs, such as left, right, rotate, or soft drop, are processed.
-  Collision Detection:
-      After handling user input, the game checks for collisions.
-      If the tetromino encounters a block or reaches the bottom, it stops falling.
-  Line Clearing:
-      The game checks for completed lines after a tetromino has stopped falling.
-      If a line is completed, it is cleared, and the player scores points.
-  Spawn New Tetromino:
-      A new tetromino is spawned, and the process repeats.
-  */
+  // main game update loop.
+  // updates done in the following order:
+  // -gravity update (handled in outer game loop)
+  // -user input handling
+  // -collision detection
+  // -line clearing + scoring
+  // -spawn new piece
   update() {
-    // kind of a hack, is there a cleaner way to do the start?
+    // check for initialization case, kind of a hack, try to improve this later
     if (this.piece == null) {
       this.spawn();
       return;
@@ -134,7 +124,7 @@ export default class Board {
       this.drop(1);
     }
     if (keys[KEY.SPACE]) {
-      // kind of a hack of a loop check, make less dependency-ish
+      // kind of a hack of a loop check to drop piece, make less dependency'ish later
       while (!this.toSpawn) {
         this.drop(2);
       }
@@ -156,9 +146,7 @@ export default class Board {
       }
     }
 
-    // design question: should row cancellation take place in between freezing and spawning?
     this.clearFilledRows();
-
     scoreElement.textContent = gameState.currentScore.toString();
     levelElement.textContent = gameState.currentLevel.toString();
     linesElement.textContent = gameState.currentLines.toString();
@@ -169,11 +157,13 @@ export default class Board {
     }
   }
 
-  // should drop return a boolean per success/failure?
-  // 0: standard, 1: soft drop, 2: hard drop
+  // handles logic for piece movement down the board
+  // dropType = 0, standard aka gravity drop
+  // dropType = 1, soft drop
+  // dropType = 2, hard drop
   drop(dropType = 0): void {
     // why does spawnFlag have to be false? previously had a check 'if(this.piece != null && !spawnFlag)'
-    if (this.piece != null) {
+    if (this.piece != null && !this.toSpawn) {
       if (this.valid(moves[KEY.DOWN](this.piece))) {
         this.piece.move(this.piece.y + 1, this.piece.x);
         gameState.currentScore += dropType;
@@ -190,6 +180,7 @@ export default class Board {
     this.nextPiece = new Piece(this.ctxNextPiece);
     newPiece.setStartingPosition();
     let squares = this.getSquaresOfPiece(newPiece);
+    // if any of the squares of the newly spawned piece are already taken, then game over
     if (squares.some((s) => this.grid[s[0]][s[1]])) {
       sfx.gameover.play();
       throw new Error("gameover");
@@ -200,6 +191,7 @@ export default class Board {
     }
   }
 
+  // reset time exists and time simulated logic for handling falling speed of various levels
   resetTime(): void {
     gameState.timeExists = 0;
     // important for initialization; otherwise, first piece falls too quickly (breaks math with initial values of zero and zero)
@@ -221,6 +213,7 @@ export default class Board {
     } else {
       sfx.clearlines.play();
       gameState.currentLines += linesCleared;
+      // level up after clear ten lines
       if (gameState.currentLines % 10 == 0) {
         if (gameState.currentLevel != maxLevel) {
           gameState.currentLevel += 1;
@@ -258,11 +251,10 @@ export default class Board {
     );
   }
 
-  /* 
-  sanity checks:
-  within confines of game board
-  isn't colliding with frozen pieces
-  */
+  // checks if piece is valid for the board
+  // sanity checks:
+  // a) within confines of game board
+  // b) isn't colliding with frozen pieces
   valid(p: Piece): boolean {
     return p.shape.every((row, y) => {
       return row.every((value, x) => {
@@ -278,16 +270,15 @@ export default class Board {
 
   withinGrid(y: number, x: number): boolean {
     let res = y < ROWS && x > -1 && x < COLUMNS;
-    // console.log("withinGrid res: " + res);
     return res;
   }
 
   noCollisions(y: number, x: number): boolean {
     let res = this.grid[y][x] == 0;
-    // console.log("noCollisions res: " + res);
     return res;
   }
 
+  // returns [y,x] coordinates for ghost/projection piece
   ghostLocation(): number[] {
     let copy = Object.assign({}, this.piece);
     while (this.valid(copy)) {
@@ -296,7 +287,7 @@ export default class Board {
     return [copy.y - 1, copy.x];
   }
 
-  clear() {
+  clearCanvases() {
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctxNextPiece.clearRect(
       0,
@@ -307,13 +298,14 @@ export default class Board {
   }
 
   render() {
-    this.clear();
+    this.clearCanvases();
     if (this.piece != null) {
       // order matters here so that piece overrides ghost
-      let coordinates = this.ghostLocation();
-      // if current piece just got frozen, the there is a single frame where ghost piece will end up being above the current piece
-      if (coordinates[0] > this.piece.y) {
-        this.piece.drawProjection(coordinates[0], coordinates[1]);
+      let ghostCoordinates = this.ghostLocation();
+      // if current piece just got frozen, the there is a single frame where ghost piece
+      // will end up being above the current piece, so only draw project if ghost piece is below
+      if (ghostCoordinates[0] > this.piece.y) {
+        this.piece.drawProjection(ghostCoordinates[0], ghostCoordinates[1]);
       }
       this.piece.draw();
       this.nextPiece.draw();
